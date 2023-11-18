@@ -127,9 +127,9 @@ echo "$lb_config" > /etc/nginx/sites-available/granz.channel.it17.com
 # Config No 18
 
 echo 'upstream worker {
-    server 10.72.4.2:8002;
-    server 10.72.4.3:8003;
-    server 10.72.4.4:8004;
+    server 10.72.4.2:8003;
+    server 10.72.4.3:8002;
+    server 10.72.4.4:8001;
 }
 
 server {
