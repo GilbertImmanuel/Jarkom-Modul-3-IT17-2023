@@ -12,6 +12,392 @@ Laporan resmi dari modul ketiga mata kuliah Komunikasi Data dan Jaringan Kompute
 
 ## Penjelasan
 
+### Soal 0
+Instalasi dan konfigurasi ip
+
+```sh
+echo "nameserver 192.168.122.1" > /etc/resolv.conf
+apt-get update
+apt-get install bind9 -y
+```
+
+Menambahkan DNS zone configurations to /etc/bind/named.conf.local untuk dua domain yaitu riegel dan granz
+
+```sh
+echo '
+zone "riegel.canyon.it17.com" {
+  type master;
+  file "/etc/bind/it17_modul3/riegel.canyon.it17.com";
+};
+
+zone "granz.channel.it17.com" {
+  type master;
+  file "/etc/bind/it17_modul3/granz.channel.it17.com";
+};
+' > /etc/bind/named.conf.local
+
+mkdir -p /etc/bind/it17_modul3
+
+echo ';
+; BIND data file for local loopback interface
+;
+$TTL    2022100601
+@       IN      SOA     riegel.canyon.it17.com. root.riegel.canyon.it17.com. (
+                              2022100601         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+@       IN      NS      riegel.canyon.it17.com.
+@       IN      A       10.72.2.3
+www     IN      CNAME   riegel.canyon.it17.com.
+' > /etc/bind/it17_modul3/riegel.canyon.it17.com
+
+echo ';
+; BIND data file for local loopback interface
+;
+$TTL    2022100601
+@       IN      SOA     granz.channel.it17.com. root.granz.channel.it17.com. (
+                              2022100601         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+@       IN      NS      granz.channel.it17.com.
+@       IN      A       10.72.2.3
+www     IN      CNAME   granz.channel.it17.com.
+' > /etc/bind/it17_modul3/granz.channel.it17.com
+
+echo '
+options {
+  directory "/var/cache/bind";
+  forwarders {
+    192.168.122.1;
+  };
+  allow-query{any;};
+
+  listen-on-v6 { any; };
+};
+' > /etc/bind/named.conf.options
+
+service bind9 restart
+```
+
+### Soal 1. 
+
+Semua CLIENT harus menggunakan konfigurasi dari DHCP Server.
+Contoh salah satu script pada client Sein yang juga sama dengan client yang lain, yang terhubung menggunakan DHCP Server dan fixed ip
+```sh
+echo '
+auto eth0
+iface eth0 inet dhcp
+hwaddress enter 46:18:ea:e5:8d:1a
+' > /etc/network/interfaces
+
+apt-get update
+apt-get install apache2-utils
+apt install dnsutils
+apt install lynx
+```
+
+### Soal 2.
+
+Client yang melalui Switch3 mendapatkan range IP dari [prefix IP].3.16 - [prefix IP].3.32 dan [prefix IP].3.64 - [prefix IP].3.80 
+```sh
+subnet 10.72.3.0 netmask 255.255.255.0 {
+    range 10.72.3.16 10.72.3.32;
+    range 10.72.3.64 10.72.3.80;
+    option routers 10.72.3.1;
+    option broadcast-address 10.72.3.255;
+    option domain-name-servers 10.72.1.3;
+    default-lease-time 180;
+    max-lease-time 5760;
+}
+```
+
+### Soal 3.
+
+Client yang melalui Switch4 mendapatkan range IP dari [prefix IP].4.12 - [prefix IP].4.20 dan [prefix IP].4.160 - [prefix IP].4.16
+
+```sh
+subnet 10.72.4.0 netmask 255.255.255.0 {
+    range 10.72.4.12 10.72.4.20;
+    range 10.72.4.160 10.72.4.168;
+    option routers 10.72.4.1;
+    option broadcast-address 10.72.4.255;
+    option domain-name-servers 10.72.1.3;
+    default-lease-time 720;
+    max-lease-time 5760;
+}
+```
+
+### Soal 4. 
+
+Client mendapatkan DNS dari Heiter dan dapat terhubung dengan internet melalui DNS tersebut. IP Heiter = 10.72.1.3
+
+```sh
+    option domain-name-servers 10.72.1.3;
+```
+
+### Soal 5.
+
+Lama waktu DHCP server meminjamkan alamat IP kepada Client yang melalui Switch3 selama 3 menit sedangkan pada client yang melalui Switch4 selama 12 menit. Dengan waktu maksimal dialokasikan untuk peminjaman alamat IP selama 96 menit
+
+Konfigurasi waktu untuk Switch 3
+```sh
+    default-lease-time 180;
+    max-lease-time 5760;
+```
+
+Konfigurasi waktu untuk Switch 4
+```sh
+    default-lease-time 720;
+    max-lease-time 5760;
+```
+
+### Soal 6. 
+
+Pada masing-masing worker PHP, lakukan konfigurasi virtual host untuk website berikut dengan menggunakan php 7.3.
+
+```sh
+#!/bin/bash
+
+# Add nameserver to /etc/resolv.conf
+echo "nameserver 192.168.122.1" >> /etc/resolv.conf
+
+# Update package list
+
+apt-get update
+apt install nginx
+apt install zip
+apt install php php-fpm -y
+
+wget --no-check-certificate 'https://drive.google.com/u/0/uc?id=1ViSkRq7SmwZgdK64eRbr5Fm1EGCTPrU1&export=download' -O web-asset
+
+mkdir /var/www/granz.channel.it17.com
+
+unzip -o web-asset
+mv ~/modul-3/* /var/www/granz.channel.it17.com
+
+server_config=$(cat <<EOF
+server {
+    listen 80;
+    root /var/www/granz.channel.it17.com;
+    index index.php index.html index.htm;
+    server_name _;
+
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/var/run/php/php7.2-fpm.sock;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+
+    error_log /var/log/nginx/granz.channel.it17.log;
+    access_log /var/log/nginx/granz.channel.it17.log;
+}
+EOF
+)
+
+output_file="/etc/nginx/sites-available/granz.channel.it17.com"
+echo "$server_config" > "$output_file"
+
+rm /etc/nginx/sites-available/default
+rm /etc/nginx/sites-enabled/default
+
+ln -s /etc/nginx/sites-available/granz.channel.it17.com /etc/nginx/sites-enabled
+
+service nginx restart
+/etc/init.d/php7.2-fpm start
+```
+
+### Soal 7. 
+
+Testing dengan 1000 request dan 100 request/second
+```sh
+ab -n 1000 -c 100
+```
+
+### Soal 8. 
+
+Load Balancer server config
+
+```sh
+lb_config=$(cat <<EOF
+    upstream myweb_robin {
+        server 10.72.3.2;
+        server 10.72.3.3;
+        server 10.72.3.4;
+    }
+
+    upstream myweb_robin_weight {
+        server 10.72.3.2 weight=1;
+        server 10.72.3.3 weight=2;
+        server 10.72.3.4 weight=4;
+    }
+
+    upstream myweb_robin1 {
+        server 10.72.3.2;
+    }
+
+    upstream myweb_robin2 {
+        server 10.72.3.2;
+        server 10.72.3.3;
+    }
+
+    upstream myweb_robin3 {
+        server 10.72.3.2;
+        server 10.72.3.3;
+        server 10.72.3.4;
+    }
+
+    upstream myweb_least_conn {
+        least_conn;
+        server 10.72.3.2;
+        server 10.72.3.3;
+        server 10.72.3.4;
+    }
+
+    upstream myweb_ip_hash {
+        ip_hash;
+        server 10.72.3.2;
+        server 10.72.3.3;
+        server 10.72.3.4;
+    }
+
+    upstream myweb_hash {
+        hash $request_uri consistent;
+        server 10.72.3.2;
+        server 10.72.3.3;
+        server 10.72.3.4;
+    }
+
+
+    server {
+        listen 80;
+        server_name granz.channel.it17.com;
+
+        allow 10.72.3.69;
+        allow 10.72.3.70;
+        allow 10.72.4.167;
+        allow 10.72.4.168;
+        deny all;
+
+        location /its {
+            proxy_pass https://www.its.ac.id/;
+        }
+
+        location / {
+            proxy_pass http://myweb_robin;
+
+            auth_basic "Administrator's Area";
+            auth_basic_user_file /etc/nginx/rahasiakita/.htpasswd;
+        }
+
+        location /first/ {
+            proxy_pass http://myweb_robin1;
+        }
+
+        location /second/ {
+            proxy_pass http://myweb_robin2;
+        }
+
+        location /third/ {
+            proxy_pass http://myweb_robin3;
+        }
+
+        location /weight/ {
+            proxy_pass http://myweb_robin_weight;
+        }
+
+        location /least_conn/ {
+            proxy_pass http://myweb_least_conn;
+        }
+
+        location /ip_hash/ {
+            proxy_pass http://myweb_ip_hash;
+        }
+
+        location /hash/ {
+            proxy_pass http://myweb_hash;
+        }
+
+        location ~ /\.ht {
+            deny all;
+        }
+error_log /var/log/nginx/eisen_error.log;
+access_log /var/log/nginx/eisen_access.log;
+    }
+EOF
+)
+```
+Testing menggunakan 200 request dan 10 rps
+```sh
+ab -n 200 -c 10
+```
+
+### Soal 9.
+
+Testing menggunakan 100 request dan 10 rps
+```sh
+ab -n 200 -c 10
+```
+konfigurasi pada load balancer menggunakan worker 1 2 dan 3
+```sh
+upstream myweb_robin1 {
+    server 10.72.3.2;
+}
+
+upstream myweb_robin2 {
+    server 10.72.3.2;
+    server 10.72.3.3;
+}
+
+upstream myweb_robin3 {
+    server 10.72.3.2;
+    server 10.72.3.3;
+    server 10.72.3.4;
+}
+```
+
+### Soal 10.
+
+Selanjutnya coba tambahkan konfigurasi autentikasi di LB dengan dengan kombinasi username: “netics” dan password: “ajkyyy”, dengan yyy merupakan kode kelompok. Terakhir simpan file “htpasswd” nya di /etc/nginx/rahasisakita/
+
+```sh
+htpasswd -c /etc/nginx/rahasiakita/.htpasswd netics
+```
+
+### Soal 11. 
+
+Lalu buat untuk setiap request yang mengandung /its akan di proxy passing menuju halaman https://www.its.ac.id.
+
+```sh
+location /its {
+    proxy_pass https://www.its.ac.id/;
+}
+```
+
+### Soal 12.
+
+Selanjutnya LB ini hanya boleh diakses oleh client dengan IP [Prefix IP].3.69, [Prefix IP].3.70, [Prefix IP].4.167, dan [Prefix IP].4.168.
+
+```sh
+allow 10.72.3.69;
+allow 10.72.3.70;
+allow 10.72.4.167;
+allow 10.72.4.168;
+```
+
+
 ### Soal 13
 
 > Semua data yang diperlukan, diatur pada Denken dan harus dapat diakses oleh Frieren, Flamme, dan Fern.
