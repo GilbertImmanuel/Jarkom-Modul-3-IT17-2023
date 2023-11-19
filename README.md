@@ -362,7 +362,7 @@ Hash
 
 Testing menggunakan 100 request dan 10 rps
 ```sh
-ab -n 200 -c 10
+ab -n 100 -c 10
 ```
 konfigurasi pada load balancer menggunakan worker 1 2 dan 3
 ```sh
