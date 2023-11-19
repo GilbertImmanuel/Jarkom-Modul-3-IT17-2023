@@ -14,6 +14,7 @@ Laporan resmi dari modul ketiga mata kuliah Komunikasi Data dan Jaringan Kompute
 
 ### Soal 0
 Instalasi dan konfigurasi ip
+![1](images/1.png)
 
 ```sh
 echo "nameserver 192.168.122.1" > /etc/resolv.conf
@@ -225,6 +226,7 @@ Testing dengan 1000 request dan 100 request/second
 ```sh
 ab -n 1000 -c 100
 ```
+![soal7](images/rr.png)
 
 ### Soal 8. 
 
@@ -343,6 +345,18 @@ Testing menggunakan 200 request dan 10 rps
 ```sh
 ab -n 200 -c 10
 ```
+## Dokumentasi testing
+Round Robin Weight
+![rrw](images/rrw.png)
+
+Least Conn
+![lc](images/lc.png)
+
+IP Hash
+![iph](images/iph.png)
+
+Hash
+![h](images/h.png)
 
 ### Soal 9.
 
@@ -367,6 +381,15 @@ upstream myweb_robin3 {
     server 10.72.3.4;
 }
 ```
+## Dokumentasi Testing
+ONE WORKER
+![one worker](images/wf.png)
+
+TWO WORKER
+![two worker](images/ws.png)
+
+THREE WORKER
+![three worker](images/wt.png)
 
 ### Soal 10.
 
